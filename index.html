@@ -34,14 +34,14 @@
 
     <dialog id="entryDialog">
       <form method="dialog" id="entryForm">
-        <div class="modal-head"><h2 id="formTitle">Add transaction</h2><button class="plain" value="cancel" aria-label="Close">×</button></div>
+        <div class="modal-head"><h2 id="formTitle">Add transaction</h2><button type="button" class="plain" data-close-dialog="entryDialog" aria-label="Close">×</button></div>
         <input type="hidden" id="entryType" value="transaction" />
         <label>Amount<input id="amount" inputmode="decimal" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
         <label id="nameLabel">Merchant<input id="name" maxlength="50" required placeholder="Example: Chevron" /></label>
         <label id="categoryLabel">Category<select id="category"></select></label>
         <label id="dateLabel">Date<input id="entryDate" type="date" required /></label>
         <label id="notesLabel">Notes<input id="notes" maxlength="140" placeholder="Optional" /></label>
-        <div class="modal-actions"><button class="secondary" value="cancel">Cancel</button><button class="primary" id="saveEntry" value="default">Save</button></div>
+        <div class="modal-actions"><button type="button" class="secondary" data-close-dialog="entryDialog">Cancel</button><button class="primary" id="saveEntry" value="default">Save</button></div>
       </form>
     </dialog>
 
