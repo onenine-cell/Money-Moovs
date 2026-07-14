@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#050806" />
+    <meta name="description" content="A private, offline-first personal money dashboard." />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Money Moves</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div><p class="eyebrow">MONEY MOVES</p><h1 id="screenTitle">Dashboard</h1></div>
+        <button class="icon-button" id="quickAdd" aria-label="Add transaction">+</button>
+      </header>
+
+      <section id="dashboard" class="screen active"></section>
+      <section id="transactions" class="screen"></section>
+      <section id="payday" class="screen"></section>
+      <section id="goals" class="screen"></section>
+      <section id="settings" class="screen"></section>
+    </main>
+
+    <nav class="tabbar" aria-label="Main navigation">
+      <button class="tab active" data-screen="dashboard"><span>⌂</span>Home</button>
+      <button class="tab" data-screen="transactions"><span>↕</span>Activity</button>
+      <button class="tab payday-tab" data-screen="payday"><span>$</span>Payday</button>
+      <button class="tab" data-screen="goals"><span>◎</span>Goals</button>
+      <button class="tab" data-screen="settings"><span>⚙</span>Settings</button>
+    </nav>
+
+    <dialog id="entryDialog">
+      <form method="dialog" id="entryForm">
+        <div class="modal-head"><h2 id="formTitle">Add transaction</h2><button class="plain" value="cancel" aria-label="Close">×</button></div>
+        <input type="hidden" id="entryType" value="transaction" />
+        <label>Amount<input id="amount" inputmode="decimal" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
+        <label id="nameLabel">Merchant<input id="name" maxlength="50" required placeholder="Example: Chevron" /></label>
+        <label id="categoryLabel">Category<select id="category"></select></label>
+        <label id="dateLabel">Date<input id="entryDate" type="date" required /></label>
+        <label id="notesLabel">Notes<input id="notes" maxlength="140" placeholder="Optional" /></label>
+        <div class="modal-actions"><button class="secondary" value="cancel">Cancel</button><button class="primary" id="saveEntry" value="default">Save</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="paydayDialog">
+      <form method="dialog" id="paydayForm">
+        <div class="modal-head"><h2>Log paycheck</h2><button class="plain" value="cancel" aria-label="Close">×</button></div>
+        <p class="muted">Review the split before saving. You can change these percentages in Settings.</p>
+        <label>Paycheck amount<input id="paycheckAmount" inputmode="decimal" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
+        <div id="allocationPreview" class="allocation-preview"></div>
+        <div class="modal-actions"><button class="secondary" value="cancel">Cancel</button><button class="primary" value="default">Log paycheck</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="goalDialog">
+      <form method="dialog" id="goalForm">
+        <div class="modal-head"><h2>New goal</h2><button class="plain" value="cancel" aria-label="Close">×</button></div>
+        <label>Goal name<input id="goalName" maxlength="50" required placeholder="Example: Car fund" /></label>
+        <label>Target amount<input id="goalTarget" inputmode="decimal" type="number" min="1" step="0.01" required placeholder="5000" /></label>
+        <label>Target date <span class="muted">(optional)</span><input id="goalDate" type="date" /></label>
+        <div class="modal-actions"><button class="secondary" value="cancel">Cancel</button><button class="primary" value="default">Create goal</button></div>
+      </form>
+    </dialog>
+    <script src="app.js"></script>
+  </body>
+</html>
