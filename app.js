@@ -6,6 +6,8 @@ let active = 'dashboard';
 const save=()=>localStorage.setItem('moneyMoves',JSON.stringify(data));
 const money=n=>fmt.format(Number(n||0)); const today=()=>new Date().toISOString().slice(0,10);
 const currentPaycheck=()=>data.paychecks.at(-1);
+const DOWN_PAYMENT_GOAL=5000;
+const downPaymentTotal=()=>data.paychecks.reduce((total,paycheck)=>total+Number(paycheck.allocations?.['Down Payment']||0),0);
 const income=()=>currentPaycheck()?.amount||0;
 const allocated=()=>currentPaycheck()?Object.values(currentPaycheck().allocations).reduce((a,b)=>a+b,0):0;
 const transactionsTotal=()=>data.transactions.reduce((a,x)=>a+x.amount,0);
@@ -37,4 +39,6 @@ function preview(){let n=Number($('#paycheckAmount').value)||0;$('#allocationPre
 $('#paydayForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();let amount=Number($('#paycheckAmount').value);if(!amount)return;let allocations=Object.fromEntries(Object.entries(data.settings.allocations).map(([n,p])=>[n,Math.round(amount*p)/100]));data.paychecks.push({id:crypto.randomUUID(),amount,allocations,date:today()});let d=new Date(data.settings.nextPayday+'T00:00');d.setDate(d.getDate()+(data.settings.frequency==='weekly'?7:14));data.settings.nextPayday=d.toISOString().slice(0,10);save();$('#paydayDialog').close();active='dashboard';render()});
 $('#goalForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();data.goals.push({id:crypto.randomUUID(),name:$('#goalName').value.trim(),target:Number($('#goalTarget').value),saved:0,date:$('#goalDate').value});save();$('#goalDialog').close();render()});
 document.addEventListener('change',e=>{if(e.target.id==='nextPayday'){data.settings.nextPayday=e.target.value;save()}if(e.target.id==='frequency'){data.settings.frequency=e.target.value;save()}if(e.target.classList.contains('allocation-input')){data.settings.allocations[e.target.dataset.name]=Number(e.target.value)||0;save()}render()});
+const renderDashboard=dashboard;
+dashboard=()=>{renderDashboard();const card=[...document.querySelectorAll('#dashboard .allocation-list .card')].find(item=>item.querySelector('.row strong')?.textContent==='Down Payment');if(!card)return;const total=downPaymentTotal(),progress=Math.min(100,total/DOWN_PAYMENT_GOAL*100);card.querySelector('.row div p').textContent=`${money(total)} of ${money(DOWN_PAYMENT_GOAL)} goal`;card.querySelector('.progress i').style.width=`${progress}%`;card.insertAdjacentHTML('beforeend',`<p class="muted">${Math.round(progress)}% of your $5,000 down payment goal</p>`)};
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./service-worker.js');render();
