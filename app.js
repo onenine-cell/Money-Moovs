@@ -1,9 +1,8 @@
 const $ = s => document.querySelector(s);
 const fmt = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
-const defaultData = {settings:{nextPayday:'2026-07-24',frequency:'biweekly',allocations:{Savings:35,'Down Payment':20,Gas:7,Insurance:9},categories:['Food','Gas','Shopping','Entertainment','Bills','Other'],subscriptionPresets:[]},paychecks:[],transactions:[],goals:[],subscriptions:[]};
+const defaultData = {settings:{nextPayday:'2026-07-24',frequency:'biweekly',allocations:{Savings:35,'Down Payment':20,Gas:7,Insurance:9},categories:['Food','Gas','Shopping','Entertainment','Bills','Other']},paychecks:[],transactions:[],goals:[],subscriptions:[]};
 let data = JSON.parse(localStorage.getItem('moneyMoves') || 'null') || defaultData;
 data.subscriptions ||= [];
-data.settings.subscriptionPresets ||= [];
 const SUBSCRIPTION_PRESETS=[
   {name:'ChatGPT Plus',amount:20},
   {name:'Xbox Game Pass Ultimate',amount:22.99},
@@ -11,7 +10,7 @@ const SUBSCRIPTION_PRESETS=[
   {name:'iCloud+ (50 GB)',amount:0.99},
   {name:'Uber One',amount:9.99}
 ];
-const allSubscriptionPresets=()=>[...SUBSCRIPTION_PRESETS,...data.settings.subscriptionPresets];
+const allSubscriptionPresets=()=>SUBSCRIPTION_PRESETS;
 let active = 'dashboard';
 const save=()=>localStorage.setItem('moneyMoves',JSON.stringify(data));
 const money=n=>fmt.format(Number(n||0)); const today=()=>new Date().toISOString().slice(0,10);
@@ -75,8 +74,4 @@ document.querySelectorAll('dialog').forEach(dialog=>{dialog.addEventListener('cl
 document.addEventListener('submit',e=>{if(e.submitter?.value==='cancel')e.target.closest('dialog')?.close()},true);
 const renderGoals=goals;
 goals=()=>{renderGoals();document.getElementById('addGoal')?.remove();$('#goals').insertAdjacentHTML('beforeend','<button class="primary" id="addGoal">Create a goal</button>')};
-const renderSettings=settings;
-settings=()=>{renderSettings();const presets=data.settings.subscriptionPresets;$('#settings').insertAdjacentHTML('beforeend',`<section class="card setting-group"><h3>Saved subscription presets</h3><p class="muted">These appear as suggestions when you type a subscription name.</p>${presets.map(p=>`<div class="setting-row"><label>${escape(p.name)}<br><small>${money(p.amount)}/month</small></label><button class="link-btn danger-link" data-delete-subscription-preset="${p.id}">Remove</button></div>`).join('')||'<p class="muted">No custom presets saved yet.</p>'}<button class="primary" id="addSubscriptionPreset">Save a preset</button></section>`) };
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(t.id==='addSubscriptionPreset'){$('#subscriptionPresetForm').reset();$('#subscriptionPresetDialog').showModal();e.stopImmediatePropagation()}if(t.dataset.deleteSubscriptionPreset!==undefined){e.stopImmediatePropagation();data.settings.subscriptionPresets=data.settings.subscriptionPresets.filter(p=>p.id!==t.dataset.deleteSubscriptionPreset);save();render()}},true);
-$('#subscriptionPresetForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();const name=$('#presetName').value.trim(),amount=Number($('#presetAmount').value);if(!name||!amount)return;data.settings.subscriptionPresets.push({id:crypto.randomUUID(),name,amount});save();$('#subscriptionPresetDialog').close();render()});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./service-worker.js');render();
