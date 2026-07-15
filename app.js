@@ -3,6 +3,13 @@ const fmt = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
 const defaultData = {settings:{nextPayday:'2026-07-24',frequency:'biweekly',allocations:{Savings:35,'Down Payment':20,Gas:7,Insurance:9},categories:['Food','Gas','Shopping','Entertainment','Bills','Other']},paychecks:[],transactions:[],goals:[],subscriptions:[]};
 let data = JSON.parse(localStorage.getItem('moneyMoves') || 'null') || defaultData;
 data.subscriptions ||= [];
+const SUBSCRIPTION_PRESETS=[
+  {name:'ChatGPT Plus',amount:20},
+  {name:'Xbox Game Pass Ultimate',amount:22.99},
+  {name:'Spotify Premium Individual',amount:12.99},
+  {name:'iCloud+ (50 GB)',amount:0.99},
+  {name:'Uber One',amount:9.99}
+];
 let active = 'dashboard';
 const save=()=>localStorage.setItem('moneyMoves',JSON.stringify(data));
 const money=n=>fmt.format(Number(n||0)); const today=()=>new Date().toISOString().slice(0,10);
@@ -54,6 +61,8 @@ const renderTransactions=transactions;
 transactions=()=>{renderTransactions();document.getElementById('addTransaction')?.remove();const reserved=subscriptionsReserved(),items=upcomingSubscriptions(),box=`<div class="section-title"><h2>Upcoming subscriptions</h2></div><section class="card activity"><div class="row"><div><strong>Reserved before payday</strong><p>This amount is already removed from Available to Spend.</p></div><strong class="amount-out">${money(reserved)}</strong></div>${items.map(sub=>`<div class="activity-item"><div class="activity-icon">$</div><div class="activity-main"><strong>${escape(sub.name)}</strong><p>Charges ${sub.due.toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${money(sub.amount)} monthly</p></div><button class="link-btn danger-link" data-delete-subscription="${sub.id}">Remove</button></div>`).join('')||'<div class="empty">No subscriptions due before payday.<br>Add Netflix, Spotify, phone bills, or anything recurring.</div>'}<button class="primary" id="addSubscription">Add subscription</button></section>`;$('#transactions').insertAdjacentHTML('afterbegin',box)};
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(t.id==='addSubscription'){$('#subscriptionForm').reset();$('#subscriptionDialog').showModal();e.stopImmediatePropagation()}if(t.dataset.deleteSubscription!==undefined){e.stopImmediatePropagation();const sub=data.subscriptions.find(x=>x.id===t.dataset.deleteSubscription);if(sub&&confirm(`Remove ${sub.name}?`)){data.subscriptions=data.subscriptions.filter(x=>x.id!==sub.id);save();render()}}},true);
 $('#subscriptionForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();const name=$('#subscriptionName').value.trim(),amount=Number($('#subscriptionAmount').value),dueDay=Number($('#subscriptionDay').value);if(!name||!amount||dueDay<1||dueDay>28)return;data.subscriptions.push({id:crypto.randomUUID(),name,amount,dueDay});save();$('#subscriptionDialog').close();render()});
+$('#subscriptionPreset').innerHTML='<option value="">Choose a service (optional)</option>'+SUBSCRIPTION_PRESETS.map((sub,index)=>`<option value="${index}">${sub.name} — ${money(sub.amount)}/month</option>`).join('');
+$('#subscriptionPreset').addEventListener('change',e=>{if(e.target.value==='')return;const sub=SUBSCRIPTION_PRESETS[Number(e.target.value)];if(sub){$('#subscriptionName').value=sub.name;$('#subscriptionAmount').value=sub.amount.toFixed(2)}});
 document.querySelectorAll('[data-close-dialog]').forEach(button=>{button.type='button';button.addEventListener('click',e=>{e.preventDefault();document.getElementById(button.dataset.closeDialog)?.close()})});
 document.querySelectorAll('dialog').forEach(dialog=>{dialog.addEventListener('click',e=>{const box=dialog.getBoundingClientRect();if(e.target===dialog&&(e.clientX<box.left||e.clientX>box.right||e.clientY<box.top||e.clientY>box.bottom))dialog.close()});dialog.addEventListener('cancel',()=>dialog.close())});
 document.addEventListener('submit',e=>{if(e.submitter?.value==='cancel')e.target.closest('dialog')?.close()},true);

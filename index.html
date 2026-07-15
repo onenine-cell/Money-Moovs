@@ -30,7 +30,7 @@
       <button class="tab" data-screen="goals"><svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m15 9 5-5"/></svg><span>Goals</span></button>
       <button class="tab" data-screen="settings"><svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V20h-3v-.08A1.7 1.7 0 0 0 10.66 18.36a1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 14.7a1.7 1.7 0 0 0-1.56-1.04H5v-3h.08A1.7 1.7 0 0 0 6.64 9.62 1.7 1.7 0 0 0 6.3 7.74l-.06-.06 2.12-2.12.06.06A1.7 1.7 0 0 0 10.3 6a1.7 1.7 0 0 0 1.04-1.56V4h3v.08A1.7 1.7 0 0 0 15.38 5.64a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.12 2.12-.06.06A1.7 1.7 0 0 0 19 9.3a1.7 1.7 0 0 0 1.56 1.04H21v3h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>Settings</span></button>
     </nav>
-    <style>.tab{font-weight:700}.tab-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.tab.active .tab-icon{stroke-width:2.2}.payday-tab .tab-icon{width:19px;height:19px}.tab span{font-size:.68rem}</style>
+    <style>.tab{font-weight:700}.tab-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.tab.active .tab-icon{stroke-width:2.2}.payday-tab .tab-icon{width:19px;height:19px}.tab span{font-size:.68rem}.payday-tab span,.payday-tab.active span{width:auto;height:auto;display:block;background:transparent;color:inherit;border-radius:0;font-weight:inherit}</style>
 
     <dialog id="entryDialog">
       <form method="dialog" id="entryForm">
@@ -68,12 +68,13 @@
       <form method="dialog" id="subscriptionForm">
         <div class="modal-head"><h2>Add subscription</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="subscriptionDialog" aria-label="Close">×</button></div>
         <p class="muted">Money for subscriptions due before your next paycheck is reserved automatically.</p>
+        <label>Popular service<select id="subscriptionPreset"><option value="">Choose a service (optional)</option></select></label>
         <label>Subscription name<input id="subscriptionName" maxlength="50" required placeholder="Example: Spotify" /></label>
         <label>Monthly cost<input id="subscriptionAmount" inputmode="decimal" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
         <label>Day it charges each month<input id="subscriptionDay" inputmode="numeric" type="number" min="1" max="28" required placeholder="Example: 15" /></label>
         <div class="modal-actions"><button class="secondary" value="cancel" formnovalidate data-close-dialog="subscriptionDialog">Cancel</button><button class="primary" value="default">Add subscription</button></div>
       </form>
     </dialog>
-<script src="app.js?v=11"></script>
+<script src="app.js?v=14"></script>
   </body>
 </html>
