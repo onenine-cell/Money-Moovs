@@ -1,8 +1,9 @@
 const $ = s => document.querySelector(s);
 const fmt = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
-const defaultData = {settings:{nextPayday:'2026-07-24',frequency:'biweekly',allocations:{Savings:35,'Down Payment':20,Gas:7,Insurance:9},categories:['Food','Gas','Shopping','Entertainment','Bills','Other']},paychecks:[],transactions:[],goals:[],subscriptions:[]};
+const defaultData = {settings:{nextPayday:'2026-07-24',frequency:'biweekly',allocations:{Savings:35,'Down Payment':20,Gas:7,Insurance:9},categories:['Food','Gas','Shopping','Entertainment','Bills','Other'],subscriptionPresets:[]},paychecks:[],transactions:[],goals:[],subscriptions:[]};
 let data = JSON.parse(localStorage.getItem('moneyMoves') || 'null') || defaultData;
 data.subscriptions ||= [];
+data.settings.subscriptionPresets ||= [];
 const SUBSCRIPTION_PRESETS=[
   {name:'ChatGPT Plus',amount:20},
   {name:'Xbox Game Pass Ultimate',amount:22.99},
@@ -10,6 +11,7 @@ const SUBSCRIPTION_PRESETS=[
   {name:'iCloud+ (50 GB)',amount:0.99},
   {name:'Uber One',amount:9.99}
 ];
+const allSubscriptionPresets=()=>[...SUBSCRIPTION_PRESETS,...data.settings.subscriptionPresets];
 let active = 'dashboard';
 const save=()=>localStorage.setItem('moneyMoves',JSON.stringify(data));
 const money=n=>fmt.format(Number(n||0)); const today=()=>new Date().toISOString().slice(0,10);
@@ -59,13 +61,17 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
 $('#entryForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel'){editingTransactionId=null;return}if(!editingTransactionId)return;e.preventDefault();e.stopImmediatePropagation();const amount=Number($('#amount').value);if(!amount)return;data.transactions=data.transactions.map(x=>x.id===editingTransactionId?{...x,name:$('#name').value.trim(),amount,category:$('#category').value,date:$('#entryDate').value,notes:$('#notes').value.trim()}:x);editingTransactionId=null;save();$('#entryDialog').close();render()},true);
 const renderTransactions=transactions;
 transactions=()=>{renderTransactions();document.getElementById('addTransaction')?.remove();const reserved=subscriptionsReserved(),items=upcomingSubscriptions(),box=`<div class="section-title"><h2>Upcoming subscriptions</h2></div><section class="card activity"><div class="row"><div><strong>Reserved before payday</strong><p>This amount is already removed from Available to Spend.</p></div><strong class="amount-out">${money(reserved)}</strong></div>${items.map(sub=>`<div class="activity-item"><div class="activity-icon">$</div><div class="activity-main"><strong>${escape(sub.name)}</strong><p>Charges ${sub.due.toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${money(sub.amount)} monthly</p></div><button class="link-btn danger-link" data-delete-subscription="${sub.id}">Remove</button></div>`).join('')||'<div class="empty">No subscriptions due before payday.<br>Add Netflix, Spotify, phone bills, or anything recurring.</div>'}<button class="primary" id="addSubscription">Add subscription</button></section>`;$('#transactions').insertAdjacentHTML('afterbegin',box)};
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(t.id==='addSubscription'){$('#subscriptionForm').reset();$('#subscriptionDialog').showModal();e.stopImmediatePropagation()}if(t.dataset.deleteSubscription!==undefined){e.stopImmediatePropagation();const sub=data.subscriptions.find(x=>x.id===t.dataset.deleteSubscription);if(sub&&confirm(`Remove ${sub.name}?`)){data.subscriptions=data.subscriptions.filter(x=>x.id!==sub.id);save();render()}}},true);
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(t.id==='addSubscription'){$('#subscriptionForm').reset();refreshSubscriptionSuggestions();$('#subscriptionDialog').showModal();e.stopImmediatePropagation()}if(t.dataset.deleteSubscription!==undefined){e.stopImmediatePropagation();const sub=data.subscriptions.find(x=>x.id===t.dataset.deleteSubscription);if(sub&&confirm(`Remove ${sub.name}?`)){data.subscriptions=data.subscriptions.filter(x=>x.id!==sub.id);save();render()}}},true);
 $('#subscriptionForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();const name=$('#subscriptionName').value.trim(),amount=Number($('#subscriptionAmount').value),dueDay=Number($('#subscriptionDay').value);if(!name||!amount||dueDay<1||dueDay>28)return;data.subscriptions.push({id:crypto.randomUUID(),name,amount,dueDay});save();$('#subscriptionDialog').close();render()});
-$('#subscriptionPreset').innerHTML='<option value="">Choose a service (optional)</option>'+SUBSCRIPTION_PRESETS.map((sub,index)=>`<option value="${index}">${sub.name} — ${money(sub.amount)}/month</option>`).join('');
-$('#subscriptionPreset').addEventListener('change',e=>{if(e.target.value==='')return;const sub=SUBSCRIPTION_PRESETS[Number(e.target.value)];if(sub){$('#subscriptionName').value=sub.name;$('#subscriptionAmount').value=sub.amount.toFixed(2)}});
+const refreshSubscriptionSuggestions=()=>{$('#subscriptionPresetList').innerHTML=allSubscriptionPresets().map(sub=>`<option value="${escape(sub.name)}">${money(sub.amount)}/month</option>`).join('')};
+$('#subscriptionName').addEventListener('input',e=>{const sub=allSubscriptionPresets().find(item=>item.name.toLowerCase()===e.target.value.trim().toLowerCase());if(sub)$('#subscriptionAmount').value=Number(sub.amount).toFixed(2)});
 document.querySelectorAll('[data-close-dialog]').forEach(button=>{button.type='button';button.addEventListener('click',e=>{e.preventDefault();document.getElementById(button.dataset.closeDialog)?.close()})});
 document.querySelectorAll('dialog').forEach(dialog=>{dialog.addEventListener('click',e=>{const box=dialog.getBoundingClientRect();if(e.target===dialog&&(e.clientX<box.left||e.clientX>box.right||e.clientY<box.top||e.clientY>box.bottom))dialog.close()});dialog.addEventListener('cancel',()=>dialog.close())});
 document.addEventListener('submit',e=>{if(e.submitter?.value==='cancel')e.target.closest('dialog')?.close()},true);
 const renderGoals=goals;
 goals=()=>{renderGoals();document.getElementById('addGoal')?.remove();$('#goals').insertAdjacentHTML('beforeend','<button class="primary" id="addGoal">Create a goal</button>')};
+const renderSettings=settings;
+settings=()=>{renderSettings();const presets=data.settings.subscriptionPresets;$('#settings').insertAdjacentHTML('beforeend',`<section class="card setting-group"><h3>Saved subscription presets</h3><p class="muted">These appear as suggestions when you type a subscription name.</p>${presets.map(p=>`<div class="setting-row"><label>${escape(p.name)}<br><small>${money(p.amount)}/month</small></label><button class="link-btn danger-link" data-delete-subscription-preset="${p.id}">Remove</button></div>`).join('')||'<p class="muted">No custom presets saved yet.</p>'}<button class="primary" id="addSubscriptionPreset">Save a preset</button></section>`) };
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(t.id==='addSubscriptionPreset'){$('#subscriptionPresetForm').reset();$('#subscriptionPresetDialog').showModal();e.stopImmediatePropagation()}if(t.dataset.deleteSubscriptionPreset!==undefined){e.stopImmediatePropagation();data.settings.subscriptionPresets=data.settings.subscriptionPresets.filter(p=>p.id!==t.dataset.deleteSubscriptionPreset);save();render()}},true);
+$('#subscriptionPresetForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();const name=$('#presetName').value.trim(),amount=Number($('#presetAmount').value);if(!name||!amount)return;data.settings.subscriptionPresets.push({id:crypto.randomUUID(),name,amount});save();$('#subscriptionPresetDialog').close();render()});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./service-worker.js');render();

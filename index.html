@@ -68,13 +68,22 @@
       <form method="dialog" id="subscriptionForm">
         <div class="modal-head"><h2>Add subscription</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="subscriptionDialog" aria-label="Close">×</button></div>
         <p class="muted">Money for subscriptions due before your next paycheck is reserved automatically.</p>
-        <label>Popular service<select id="subscriptionPreset"><option value="">Choose a service (optional)</option></select></label>
-        <label>Subscription name<input id="subscriptionName" maxlength="50" required placeholder="Example: Spotify" /></label>
+        <label>Subscription name<input id="subscriptionName" list="subscriptionPresetList" maxlength="50" required placeholder="Start typing: ChatGPT, Spotify, Uber..." /></label>
+        <datalist id="subscriptionPresetList"></datalist>
         <label>Monthly cost<input id="subscriptionAmount" inputmode="decimal" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
         <label>Day it charges each month<input id="subscriptionDay" inputmode="numeric" type="number" min="1" max="28" required placeholder="Example: 15" /></label>
         <div class="modal-actions"><button class="secondary" value="cancel" formnovalidate data-close-dialog="subscriptionDialog">Cancel</button><button class="primary" value="default">Add subscription</button></div>
       </form>
     </dialog>
-<script src="app.js?v=14"></script>
+    <dialog id="subscriptionPresetDialog">
+      <form method="dialog" id="subscriptionPresetForm">
+        <div class="modal-head"><h2>Save subscription preset</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="subscriptionPresetDialog" aria-label="Close">×</button></div>
+        <p class="muted">Save a name and suggested price to use later.</p>
+        <label>Name<input id="presetName" maxlength="50" required placeholder="Example: Gym membership" /></label>
+        <label>Suggested monthly price<input id="presetAmount" inputmode="decimal" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
+        <div class="modal-actions"><button class="secondary" value="cancel" formnovalidate data-close-dialog="subscriptionPresetDialog">Cancel</button><button class="primary" value="default">Save preset</button></div>
+      </form>
+    </dialog>
+<script src="app.js?v=15"></script>
   </body>
 </html>
