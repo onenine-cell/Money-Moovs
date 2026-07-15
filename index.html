@@ -72,7 +72,7 @@
         <datalist id="subscriptionPresetList"></datalist>
         <label>Monthly cost<input id="subscriptionAmount" inputmode="decimal" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
         <label>Day it charges each month<input id="subscriptionDay" inputmode="numeric" type="number" min="1" max="31" required placeholder="Example: 15" /></label>
-        <div class="modal-actions"><button class="secondary" value="cancel" formnovalidate data-close-dialog="subscriptionDialog">Cancel</button><button class="primary" value="default">Add subscription</button></div>
+        <div class="modal-actions"><button class="secondary" value="cancel" formnovalidate data-close-dialog="subscriptionDialog">Cancel</button><button class="primary" type="button" id="saveSubscription">Add subscription</button></div>
       </form>
     </dialog>
     <dialog id="subscriptionPresetDialog">
@@ -84,6 +84,6 @@
         <div class="modal-actions"><button class="secondary" value="cancel" formnovalidate data-close-dialog="subscriptionPresetDialog">Cancel</button><button class="primary" value="default">Save preset</button></div>
       </form>
     </dialog>
-<script src="app.js?v=16"></script>
+<script src="app.js?v=17"></script>
   </body>
 </html>
