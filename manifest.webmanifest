@@ -4,7 +4,7 @@
   "description": "Your private personal money dashboard.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#050806",
-  "theme_color": "#050806",
+  "background_color": "#060817",
+  "theme_color": "#060817",
   "icons": [{ "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }
