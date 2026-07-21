@@ -1,77 +1,165 @@
-const $ = s => document.querySelector(s);
-const fmt = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
-const defaultData = {settings:{nextPayday:'2026-07-24',frequency:'biweekly',allocations:{Savings:35,'Down Payment':20,Gas:7,Insurance:9},categories:['Food','Gas','Shopping','Entertainment','Bills','Other']},paychecks:[],transactions:[],goals:[],subscriptions:[]};
-let data = JSON.parse(localStorage.getItem('moneyMoves') || 'null') || defaultData;
-data.subscriptions ||= [];
-const SUBSCRIPTION_PRESETS=[
-  {name:'ChatGPT Plus',amount:20},
-  {name:'Xbox Game Pass Ultimate',amount:22.99},
-  {name:'Spotify Premium Individual',amount:12.99},
-  {name:'iCloud+ (50 GB)',amount:0.99},
-  {name:'Uber One',amount:9.99}
-];
-const allSubscriptionPresets=()=>SUBSCRIPTION_PRESETS;
-let active = 'dashboard';
-const save=()=>localStorage.setItem('moneyMoves',JSON.stringify(data));
-const money=n=>fmt.format(Number(n||0)); const today=()=>new Date().toISOString().slice(0,10);
-const currentPaycheck=()=>data.paychecks.at(-1);
-const DOWN_PAYMENT_GOAL=5000;
-const downPaymentTotal=()=>data.paychecks.reduce((total,paycheck)=>total+Number(paycheck.allocations?.['Down Payment']||0),0);
-const income=()=>currentPaycheck()?.amount||0;
-const allocated=()=>currentPaycheck()?Object.values(currentPaycheck().allocations).reduce((a,b)=>a+b,0):0;
-const transactionsTotal=()=>data.transactions.reduce((a,x)=>a+x.amount,0);
-const goalsTotal=()=>data.goals.reduce((a,x)=>a+x.saved,0);
-const monthDate=(year,month,day)=>new Date(year,month,Math.min(Math.max(1,Number(day)||1),new Date(year,month+1,0).getDate()));
-const currentSubscriptionDue=sub=>{const now=new Date();return monthDate(now.getFullYear(),now.getMonth(),sub.dueDay)};
-const subscriptionPeriod=sub=>{const now=new Date();return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`};
-const subscriptionDate=sub=>{const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),now.getDate()),current=currentSubscriptionDue(sub);return current<start?monthDate(now.getFullYear(),now.getMonth()+1,sub.dueDay):current};
-const subscriptionStatus=sub=>{const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),now.getDate()),due=currentSubscriptionDue(sub),days=Math.ceil((due-start)/86400000);if(sub.paidFor===subscriptionPeriod(sub))return{label:'Paid',color:'#36d890',due};if(days<0)return{label:'Overdue',color:'#ff7a7a',due};if(days===0)return{label:'Due today',color:'#ff7a7a',due};if(days===1)return{label:'Due tomorrow',color:'#ff7a7a',due};if(days<=7)return{label:'Due soon',color:'#e3bd6d',due};return{label:'',color:'',due}};
-const upcomingSubscriptions=()=>{const payday=new Date(data.settings.nextPayday+'T23:59:59');return data.subscriptions.filter(sub=>sub.paidFor!==subscriptionPeriod(sub)).map(sub=>({...sub,due:subscriptionStatus(sub).label==='Overdue'?currentSubscriptionDue(sub):subscriptionDate(sub)})).filter(sub=>sub.due<=payday).sort((a,b)=>a.due-b.due)};
-const subscriptionsReserved=()=>upcomingSubscriptions().reduce((total,sub)=>total+Number(sub.amount||0),0);
-const available=()=>income()-allocated()-transactionsTotal()-goalsTotal()-subscriptionsReserved();
-const daysUntil=()=>Math.max(0,Math.ceil((new Date(data.settings.nextPayday+'T00:00')-new Date())/86400000));
-const escape=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function activity(){return [...data.transactions.map(x=>({...x,type:'spend'})),...data.paychecks.map(x=>({name:'Paycheck',amount:x.amount,date:x.date,type:'pay'}))].sort((a,b)=>b.date.localeCompare(a.date));}
-function dashboard(){const bal=available(), days=daysUntil(), daily=days?Math.max(0,bal/days):bal; const paycheck=currentPaycheck();
- $('#dashboard').innerHTML=`<div class="hero"><p class="hero-label">AVAILABLE TO SPEND</p><div class="balance ${bal<0?'negative':''}">${money(bal)}</div><p class="safe">Safe today: ${money(daily)}</p></div><div class="grid"><div class="stat"><p>Current paycheck</p><strong>${money(income())}</strong></div><div class="stat"><p>Spent</p><strong>${money(transactionsTotal())}</strong></div><div class="stat"><p>Allocated</p><strong>${money(allocated())}</strong></div><div class="stat"><p>Next payday</p><strong>${days ? days+' day'+(days===1?'':'s') : 'Today'}</strong></div></div><div class="section-title"><h2>Allocated this paycheck</h2></div><div class="allocation-list">${paycheck?Object.entries(paycheck.allocations).map(([name,amount])=>`<article class="card"><div class="row"><div><strong>${name}</strong><p>${data.settings.allocations[name]||0}% of paycheck</p></div><strong>${money(amount)}</strong></div><div class="progress"><i style="width:${data.settings.allocations[name]||0}%"></i></div></article>`).join(''):'<div class="empty">Your allocation cards will appear after you log your first paycheck.</div>'}</div><div class="section-title"><h2>Recent activity</h2><button class="link-btn" data-go="transactions">See all</button></div><div class="card activity">${activity().slice(0,4).map(item=>`<div class="activity-item"><div class="activity-icon">${item.type==='pay'?'$':'−'}</div><div class="activity-main"><strong>${escape(item.name)}</strong><p>${item.date}</p></div><strong class="${item.type==='pay'?'amount-in':'amount-out'}">${item.type==='pay'?'+':'−'}${money(item.amount)}</strong></div>`).join('')||'<div class="empty">No activity yet. Your money timeline will show up here.</div>'}</div><div class="section-title"><h2>Smart insight</h2></div><div class="insight">${!paycheck?'Log your first paycheck on payday to start tracking your money.':bal<0?'You are over your available balance. Review recent spending before making another purchase.':`You can spend about <b>${money(daily)}</b> a day and stay on track until payday.`}</div>`; }
-function transactions(){const items=activity().filter(x=>x.type==='spend');$('#transactions').innerHTML=`<div class="section-title"><h2>Every purchase</h2><button class="link-btn" id="addTransaction">+ Add</button></div><div class="card activity">${items.map(x=>`<div class="activity-item"><div class="activity-icon">−</div><div class="activity-main"><strong>${escape(x.name)}</strong><p>${escape(x.category)} · ${x.date}${x.notes?' · '+escape(x.notes):''}</p></div><strong class="amount-out">−${money(x.amount)}</strong></div>`).join('')||'<div class="empty">No transactions yet.<br>Tap + to log your first purchase.</div>'}</div><button class="fab" id="addTransactionFab">+ Add transaction</button>`}
-function payday(){const due=daysUntil()===0;$('#payday').innerHTML=`<div class="payday-box"><p>${due?'IT’S PAYDAY':'NEXT PAYDAY'}</p><h2>${due?'Ready to log it':new Date(data.settings.nextPayday+'T00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</h2><p>${due?'Enter your paycheck and your plan will update immediately.':`${daysUntil()} day${daysUntil()===1?'':'s'} to go`}</p><button class="primary" id="openPayday">${due?'Log paycheck':'Log early'}</button></div><div class="section-title"><h2>How it works</h2></div><div class="insight">Your paycheck is automatically divided using your settings. Once logged, the next payday advances by ${data.settings.frequency==='weekly'?'7':'14'} days.</div>`}
-function goals(){ $('#goals').innerHTML=`<div class="section-title"><h2>Your goals</h2><button class="link-btn" id="addGoal">+ Add goal</button></div>${data.goals.map((g,i)=>{let p=Math.min(100,g.saved/g.target*100);return `<article class="goal-card"><div class="row"><h3>${escape(g.name)}</h3><button class="link-btn" data-deposit="${i}">Add money</button></div><p>${money(g.saved)} of ${money(g.target)}${g.date?' · target '+g.date:''}</p><div class="progress"><i style="width:${p}%"></i></div></article>`}).join('')||'<div class="empty">No goals yet.<br>Create one and move money toward something important.</div>'}`}
-function settings(){const a=data.settings.allocations;$('#settings').innerHTML=`<div class="settings"><section class="card setting-group"><h3>Payday schedule</h3><div class="setting-row"><label>Next payday</label><input id="nextPayday" type="date" value="${data.settings.nextPayday}"></div><div class="setting-row"><label>Schedule</label><select id="frequency"><option value="biweekly" ${data.settings.frequency==='biweekly'?'selected':''}>Every 2 weeks</option><option value="weekly" ${data.settings.frequency==='weekly'?'selected':''}>Weekly</option></select></div></section><section class="card setting-group"><h3>Automatic allocations</h3>${Object.entries(a).map(([n,v])=>`<div class="setting-row"><label>${n}</label><input class="allocation-input" data-name="${n}" type="number" min="0" max="100" value="${v}"><span>%</span></div>`).join('')}</section><section class="card setting-group"><h3>Data</h3><div class="setting-row"><label>Stored only on this device</label><button class="link-btn" id="exportData">Export backup</button></div><div class="setting-row"><label>Remove all app data</label><button class="link-btn" id="resetData">Reset</button></div></section></div>`}
-function render(){
-  const screens=['dashboard','transactions','payday','goals','settings'];
-  screens.forEach(id=>{
-    const screen=document.getElementById(id);
-    screen.classList.toggle('active',id===active);
-    if(id===active) ({dashboard,transactions,payday,goals,settings})[id]();
-  });
-  $('.topbar h1').textContent=active[0].toUpperCase()+active.slice(1);
-  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.screen===active));
+const $ = selector => document.querySelector(selector);
+const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const defaultData = {
+  settings: { nextPayday: '2026-07-24', frequency: 'biweekly', allocations: { Savings: 35, 'Down Payment': 20, Insurance: 9 }, categories: ['Food', 'Gas', 'Shopping', 'Entertainment', 'Bills', 'Other'] },
+  paychecks: [], transactions: [], goals: [], subscriptions: []
+};
+let data = JSON.parse(localStorage.getItem('moneyMoves') || 'null') || JSON.parse(JSON.stringify(defaultData));
+data.settings ||= JSON.parse(JSON.stringify(defaultData.settings));
+data.settings.allocations ||= { ...defaultData.settings.allocations };
+data.settings.categories ||= [...defaultData.settings.categories];
+data.paychecks ||= []; data.transactions ||= []; data.goals ||= []; data.subscriptions ||= [];
+if ('Gas' in data.settings.allocations) {
+  delete data.settings.allocations.Gas;
+  data.paychecks.forEach(paycheck => delete paycheck.allocations?.Gas);
 }
-function openTransaction(){ $('#formTitle').textContent='Add transaction';$('#entryType').value='transaction';$('#nameLabel').firstChild.textContent='Merchant';$('#categoryLabel').hidden=false;$('#dateLabel').hidden=false;$('#notesLabel').hidden=false;$('#category').innerHTML=data.settings.categories.map(c=>`<option>${c}</option>`).join('');$('#entryDate').value=today();$('#entryForm').reset();$('#entryDate').value=today();$('#entryDialog').showModal();}
-document.addEventListener('click',e=>{let t=e.target.closest('button');if(!t)return;if(t.dataset.closeDialog){document.getElementById(t.dataset.closeDialog).close();return}if(t.dataset.screen){active=t.dataset.screen;render()}if(t.id==='quickAdd'||t.id==='addTransaction'||t.id==='addTransactionFab')openTransaction();if(t.id==='openPayday'){$('#paycheckAmount').value='';preview();$('#paydayDialog').showModal()}if(t.id==='addGoal')$('#goalDialog').showModal();if(t.dataset.go){active=t.dataset.go;render()}if(t.dataset.deposit!==undefined){let amount=Number(prompt('How much do you want to move into this goal?'));if(amount>0&&amount<=available()){data.goals[Number(t.dataset.deposit)].saved+=amount;save();render()}else if(amount>available())alert('That is more than your available-to-spend balance.')}if(t.id==='resetData'&&confirm('Delete all Money Moves data from this device?')){data=JSON.parse(JSON.stringify(defaultData));save();render()}if(t.id==='exportData'){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download='money-moves-backup.json';a.click();URL.revokeObjectURL(a.href)}});
-$('#entryForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;let amount=Number($('#amount').value);if(!amount)return;e.preventDefault();data.transactions.push({id:crypto.randomUUID(),name:$('#name').value.trim(),amount,category:$('#category').value,date:$('#entryDate').value,notes:$('#notes').value.trim()});save();$('#entryDialog').close();render()});
-function preview(){let n=Number($('#paycheckAmount').value)||0;$('#allocationPreview').innerHTML=Object.entries(data.settings.allocations).map(([x,p])=>`<div><span>${x} (${p}%)</span><b>${money(n*p/100)}</b></div>`).join('')+`<div><span>Available to spend</span><b>${money(n*(100-Object.values(data.settings.allocations).reduce((a,b)=>a+b,0))/100)}</b></div>`}$('#paycheckAmount').addEventListener('input',preview);
-$('#paydayForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();let amount=Number($('#paycheckAmount').value);if(!amount)return;let allocations=Object.fromEntries(Object.entries(data.settings.allocations).map(([n,p])=>[n,Math.round(amount*p)/100]));data.paychecks.push({id:crypto.randomUUID(),amount,allocations,date:today()});let d=new Date(data.settings.nextPayday+'T00:00');d.setDate(d.getDate()+(data.settings.frequency==='weekly'?7:14));data.settings.nextPayday=d.toISOString().slice(0,10);save();$('#paydayDialog').close();active='dashboard';render()});
-$('#goalForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();data.goals.push({id:crypto.randomUUID(),name:$('#goalName').value.trim(),target:Number($('#goalTarget').value),saved:0,date:$('#goalDate').value});save();$('#goalDialog').close();render()});
-document.addEventListener('change',e=>{if(e.target.id==='nextPayday'){data.settings.nextPayday=e.target.value;save()}if(e.target.id==='frequency'){data.settings.frequency=e.target.value;save()}if(e.target.classList.contains('allocation-input')){data.settings.allocations[e.target.dataset.name]=Number(e.target.value)||0;save()}render()});
-const renderDashboard=dashboard;
-dashboard=()=>{renderDashboard();const total=downPaymentTotal(),progress=Math.min(100,total/DOWN_PAYMENT_GOAL*100);const allocationTitle=[...document.querySelectorAll('#dashboard .section-title h2')].find(title=>title.textContent==='Allocated this paycheck');if(!allocationTitle)return;allocationTitle.closest('.section-title').insertAdjacentHTML('beforebegin',`<div class="section-title"><h2>Down payment goal</h2></div><article class="card"><div class="row"><div><strong>Down Payment</strong><p>${money(total)} of ${money(DOWN_PAYMENT_GOAL)}</p></div><strong>${Math.round(progress)}%</strong></div><div class="progress"><i style="width:${progress}%"></i></div></article>`)};
-let editingTransactionId=null;
-transactions=()=>{const items=activity().filter(x=>x.type==='spend');$('#transactions').innerHTML=`<div class="section-title"><h2>Every purchase</h2><button class="link-btn" id="addTransaction">+ Add</button></div><div class="card activity">${items.map(x=>`<div class="activity-item"><div class="activity-icon">−</div><div class="activity-main"><strong>${escape(x.name)}</strong><p>${escape(x.category)} · ${x.date}${x.notes?' · '+escape(x.notes):''}</p><div class="transaction-actions"><button class="link-btn" data-edit-transaction="${x.id}">Edit</button><button class="link-btn danger-link" data-delete-transaction="${x.id}">Delete</button></div></div><strong class="amount-out">−${money(x.amount)}</strong></div>`).join('')||'<div class="empty">No transactions yet.<br>Tap + to log your first purchase.</div>'}</div><button class="fab" id="addTransactionFab">+ Add transaction</button>`};
-openTransaction=id=>{const existing=id?data.transactions.find(x=>x.id===id):null;editingTransactionId=existing?.id||null;$('#formTitle').textContent=existing?'Edit transaction':'Add transaction';$('#category').innerHTML=data.settings.categories.map(c=>`<option>${c}</option>`).join('');$('#entryForm').reset();$('#amount').value=existing?.amount||'';$('#name').value=existing?.name||'';$('#category').value=existing?.category||data.settings.categories[0];$('#entryDate').value=existing?.date||today();$('#notes').value=existing?.notes||'';$('#entryDialog').showModal()};
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(t.dataset.closeDialog)editingTransactionId=null;if(t.dataset.editTransaction!==undefined){e.stopImmediatePropagation();openTransaction(t.dataset.editTransaction)}if(t.dataset.deleteTransaction!==undefined){e.stopImmediatePropagation();if(confirm('Delete this transaction?')){data.transactions=data.transactions.filter(x=>x.id!==t.dataset.deleteTransaction);save();render()}}},true);
-$('#entryForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel'){editingTransactionId=null;return}if(!editingTransactionId)return;e.preventDefault();e.stopImmediatePropagation();const amount=Number($('#amount').value);if(!amount)return;data.transactions=data.transactions.map(x=>x.id===editingTransactionId?{...x,name:$('#name').value.trim(),amount,category:$('#category').value,date:$('#entryDate').value,notes:$('#notes').value.trim()}:x);editingTransactionId=null;save();$('#entryDialog').close();render()},true);
-const renderTransactions=transactions;
-transactions=()=>{renderTransactions();document.getElementById('addTransaction')?.remove();const reserved=subscriptionsReserved(),items=data.subscriptions.map(sub=>({...sub,due:subscriptionDate(sub),status:subscriptionStatus(sub)})).sort((a,b)=>a.due-b.due),box=`<div class="section-title"><h2>My subscriptions</h2></div><section class="card activity"><div class="row"><div><strong>Reserved before payday</strong><p>This only includes unpaid subscriptions due before payday.</p></div><strong class="amount-out">${money(reserved)}</strong></div>${items.map(sub=>`<div class="activity-item"><div class="activity-icon">$</div><div class="activity-main"><strong>${escape(sub.name)}</strong><p>Next charge ${sub.due.toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${money(sub.amount)} monthly${sub.status.label?` · <span style="color:${sub.status.color};font-weight:800">● ${sub.status.label}</span>`:''}</p></div><div style="display:grid;justify-items:end;gap:6px">${sub.status.label==='Paid'?'':`<button class="link-btn" data-mark-subscription-paid="${sub.id}">Mark paid</button>`}<button class="link-btn danger-link" data-delete-subscription="${sub.id}">Cancel subscription</button></div></div>`).join('')||'<div class="empty">No subscriptions yet.<br>Add the subscriptions you pay each month.</div>'}<button class="primary" id="addSubscription">Add subscription</button></section>`;$('#transactions').insertAdjacentHTML('afterbegin',box)};
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(t.id==='addSubscription'){$('#subscriptionForm').reset();refreshSubscriptionSuggestions();$('#subscriptionDialog').showModal();e.stopImmediatePropagation()}if(t.dataset.markSubscriptionPaid!==undefined){e.stopImmediatePropagation();const sub=data.subscriptions.find(x=>x.id===t.dataset.markSubscriptionPaid);if(sub){sub.paidFor=subscriptionPeriod(sub);save();render()}}if(t.dataset.deleteSubscription!==undefined){e.stopImmediatePropagation();const sub=data.subscriptions.find(x=>x.id===t.dataset.deleteSubscription);if(sub&&confirm(`Remove ${sub.name}?`)){data.subscriptions=data.subscriptions.filter(x=>x.id!==sub.id);save();render()}}},true);
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||t.id!=='saveSubscription')return;e.preventDefault();e.stopImmediatePropagation();const name=$('#subscriptionName').value.trim(),amount=Number($('#subscriptionAmount').value),dueDay=Number($('#subscriptionDay').value);if(!name||!amount||dueDay<1||dueDay>31){alert('Enter a subscription name, monthly cost, and charge day.');return}data.subscriptions.push({id:crypto.randomUUID(),name,amount,dueDay});save();$('#subscriptionDialog').close();render()},true);
-$('#subscriptionForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();const name=$('#subscriptionName').value.trim(),amount=Number($('#subscriptionAmount').value),dueDay=Number($('#subscriptionDay').value);if(!name||!amount||dueDay<1||dueDay>31)return;data.subscriptions.push({id:crypto.randomUUID(),name,amount,dueDay});save();$('#subscriptionDialog').close();render()});
-const refreshSubscriptionSuggestions=()=>{$('#subscriptionPresetList').innerHTML=allSubscriptionPresets().map(sub=>`<option value="${escape(sub.name)}">${money(sub.amount)}/month</option>`).join('')};
-$('#subscriptionName').addEventListener('input',e=>{const sub=allSubscriptionPresets().find(item=>item.name.toLowerCase()===e.target.value.trim().toLowerCase());if(sub)$('#subscriptionAmount').value=Number(sub.amount).toFixed(2)});
-document.querySelectorAll('[data-close-dialog]').forEach(button=>{button.type='button';button.addEventListener('click',e=>{e.preventDefault();document.getElementById(button.dataset.closeDialog)?.close()})});
-document.querySelectorAll('dialog').forEach(dialog=>{dialog.addEventListener('click',e=>{const box=dialog.getBoundingClientRect();if(e.target===dialog&&(e.clientX<box.left||e.clientX>box.right||e.clientY<box.top||e.clientY>box.bottom))dialog.close()});dialog.addEventListener('cancel',()=>dialog.close())});
-document.addEventListener('submit',e=>{if(e.submitter?.value==='cancel')e.target.closest('dialog')?.close()},true);
-const renderGoals=goals;
-goals=()=>{renderGoals();document.getElementById('addGoal')?.remove();$('#goals').insertAdjacentHTML('beforeend','<button class="primary" id="addGoal">Create a goal</button>')};
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./service-worker.js');render();
+const save = () => localStorage.setItem('moneyMoves', JSON.stringify(data));
+save();
+
+const money = value => fmt.format(Number(value || 0));
+const today = () => new Date().toISOString().slice(0, 10);
+const escape = value => String(value).replace(/[&<>\"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+const currentPaycheck = () => data.paychecks.at(-1);
+const income = () => currentPaycheck()?.amount || 0;
+const allocated = () => currentPaycheck() ? Object.values(currentPaycheck().allocations || {}).reduce((sum, amount) => sum + Number(amount || 0), 0) : 0;
+const transactionsTotal = () => data.transactions.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+const goalsTotal = () => data.goals.reduce((sum, goal) => sum + Number(goal.saved || 0), 0);
+const daysUntil = () => Math.max(0, Math.ceil((new Date(data.settings.nextPayday + 'T00:00') - new Date()) / 86400000));
+const PAYCHECK_RESET_WINDOW = 30 * 60 * 1000;
+const resetWindowRemaining = () => {
+  const loggedAt = currentPaycheck()?.loggedAt;
+  return loggedAt ? Math.max(0, PAYCHECK_RESET_WINDOW - (Date.now() - loggedAt)) : 0;
+};
+const paycheckResetIsOpen = () => resetWindowRemaining() > 0;
+const payInterval = () => data.settings.frequency === 'weekly' ? 7 : 14;
+
+const monthDate = (year, month, day) => new Date(year, month, Math.min(Math.max(1, Number(day) || 1), new Date(year, month + 1, 0).getDate()));
+const currentSubscriptionDue = sub => { const now = new Date(); return monthDate(now.getFullYear(), now.getMonth(), sub.dueDay); };
+const subscriptionPeriod = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; };
+const subscriptionDate = sub => { const now = new Date(); const current = currentSubscriptionDue(sub); return current < new Date(now.getFullYear(), now.getMonth(), now.getDate()) ? monthDate(now.getFullYear(), now.getMonth() + 1, sub.dueDay) : current; };
+const subscriptionStatus = sub => {
+  const now = new Date(); const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()); const due = currentSubscriptionDue(sub); const days = Math.ceil((due - start) / 86400000);
+  if (sub.paidFor === subscriptionPeriod()) return { label: 'Paid', color: '#36d890', due };
+  if (days < 0) return { label: 'Overdue', color: '#ff7a7a', due };
+  if (days === 0) return { label: 'Due today', color: '#ff7a7a', due };
+  if (days === 1) return { label: 'Due tomorrow', color: '#ff7a7a', due };
+  if (days <= 7) return { label: 'Due soon', color: '#e3bd6d', due };
+  return { label: '', color: '', due };
+};
+const upcomingSubscriptions = () => {
+  const payday = new Date(data.settings.nextPayday + 'T23:59:59');
+  return data.subscriptions.filter(sub => sub.paidFor !== subscriptionPeriod()).map(sub => ({ ...sub, due: subscriptionStatus(sub).label === 'Overdue' ? currentSubscriptionDue(sub) : subscriptionDate(sub) })).filter(sub => sub.due <= payday).sort((a, b) => a.due - b.due);
+};
+const subscriptionsReserved = () => upcomingSubscriptions().reduce((sum, sub) => sum + Number(sub.amount || 0), 0);
+const available = () => income() - allocated() - transactionsTotal() - goalsTotal() - subscriptionsReserved();
+const activity = () => [...data.transactions.map(item => ({ ...item, type: 'spend' })), ...data.paychecks.map(item => ({ name: 'Paycheck', amount: item.amount, date: item.date, type: 'pay' }))].sort((a, b) => b.date.localeCompare(a.date));
+
+function dashboard() {
+  const balance = available(), days = daysUntil(), daily = days ? Math.max(0, balance / days) : balance, paycheck = currentPaycheck();
+  const downPayment = data.paychecks.reduce((sum, item) => sum + Number(item.allocations?.['Down Payment'] || 0), 0);
+  const downPaymentProgress = Math.min(100, downPayment / 5000 * 100);
+  $('#dashboard').innerHTML = `<div class="hero"><p class="hero-label">AVAILABLE TO SPEND</p><div class="balance ${balance < 0 ? 'negative' : ''}">${money(balance)}</div><p class="safe">Safe today: ${money(daily)}</p></div><div class="grid"><div class="stat"><p>Current paycheck</p><strong>${money(income())}</strong></div><div class="stat"><p>Spent</p><strong>${money(transactionsTotal())}</strong></div><div class="stat"><p>Allocated</p><strong>${money(allocated())}</strong></div><div class="stat"><p>Next payday</p><strong>${days ? `${days} day${days === 1 ? '' : 's'}` : 'Today'}</strong></div></div><div class="section-title"><h2>Down payment goal</h2></div><article class="card"><div class="row"><div><strong>Down Payment</strong><p>${money(downPayment)} of ${money(5000)}</p></div><strong>${Math.round(downPaymentProgress)}%</strong></div><div class="progress"><i style="width:${downPaymentProgress}%"></i></div></article><div class="section-title"><h2>Allocated this paycheck</h2></div><div class="allocation-list">${paycheck ? Object.entries(paycheck.allocations || {}).map(([name, amount]) => `<article class="card"><div class="row"><div><strong>${escape(name)}</strong><p>${data.settings.allocations[name] || 0}% of paycheck</p></div><strong>${money(amount)}</strong></div><div class="progress"><i style="width:${data.settings.allocations[name] || 0}%"></i></div></article>`).join('') : '<div class="empty">Your allocation cards will appear after you log your first paycheck.</div>'}</div><div class="section-title"><h2>Recent activity</h2><button class="link-btn" data-go="transactions">See all</button></div><div class="card activity">${activity().slice(0, 4).map(item => `<div class="activity-item"><div class="activity-icon">${item.type === 'pay' ? '$' : '-'}</div><div class="activity-main"><strong>${escape(item.name)}</strong><p>${item.date}</p></div><strong class="${item.type === 'pay' ? 'amount-in' : 'amount-out'}">${item.type === 'pay' ? '+' : '-'}${money(item.amount)}</strong></div>`).join('') || '<div class="empty">No activity yet. Your money timeline will show up here.</div>'}</div><div class="section-title"><h2>Smart insight</h2></div><div class="insight">${!paycheck ? 'Log your first paycheck on payday to start tracking your money.' : balance < 0 ? 'You are over your available balance. Review recent spending before making another purchase.' : `You can spend about <b>${money(daily)}</b> a day and stay on track until payday.`}</div>`;
+}
+
+function payday() {
+  const due = daysUntil() === 0, undoOpen = paycheckResetIsOpen(), recent = currentPaycheck(), remaining = Math.ceil(resetWindowRemaining() / 60000);
+  if (undoOpen) setTimeout(() => { if (active === 'payday') render(); }, resetWindowRemaining() + 100);
+  $('#payday').innerHTML = undoOpen ? `<div class="payday-box"><p>PAYCHECK LOGGED</p><h2>${money(recent.amount)}</h2><p>Need to fix it? Reset is available for ${remaining} more minute${remaining === 1 ? '' : 's'}.</p><button class="secondary" id="resetRecentPaycheck">Reset this paycheck</button></div>` : `<div class="payday-box"><p>${due ? 'IT\'S PAYDAY' : 'NEXT PAYDAY'}</p><h2>${due ? 'Ready to log it' : new Date(data.settings.nextPayday + 'T00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2><p>${due ? 'Enter your paycheck and your plan will update immediately.' : `${daysUntil()} day${daysUntil() === 1 ? '' : 's'} to go`}</p>${due ? '<button class="primary" id="openPayday">Log paycheck</button>' : '<p class="muted">Paycheck entry is locked until payday.</p>'}</div><div class="section-title"><h2>How it works</h2></div><div class="insight">Your paycheck is divided using your Settings. After you log it, you have 30 minutes to reset only that paycheck if you made a mistake.</div>`;
+}
+
+function goals() {
+  $('#goals').innerHTML = `<div class="section-title"><h2>Your goals</h2></div>${data.goals.map((goal, index) => { const progress = Math.min(100, goal.saved / goal.target * 100); return `<article class="goal-card"><div class="row"><h3>${escape(goal.name)}</h3><button class="link-btn" data-deposit="${index}">Add money</button></div><p>${money(goal.saved)} of ${money(goal.target)}${goal.date ? ` · target ${goal.date}` : ''}</p><div class="progress"><i style="width:${progress}%"></i></div></article>`; }).join('') || '<div class="empty">No goals yet.<br>Create one and move money toward something important.</div>'}<button class="primary" id="addGoal">Create a goal</button>`;
+}
+
+function settings() {
+  const allocations = data.settings.allocations;
+  $('#settings').innerHTML = `<div class="settings"><section class="card setting-group"><h3>Payday schedule</h3><div class="setting-row"><label>Next payday</label><input id="nextPayday" type="date" value="${data.settings.nextPayday}"></div><div class="setting-row"><label>Schedule</label><select id="frequency"><option value="biweekly" ${data.settings.frequency === 'biweekly' ? 'selected' : ''}>Every 2 weeks</option><option value="weekly" ${data.settings.frequency === 'weekly' ? 'selected' : ''}>Weekly</option></select></div></section><section class="card setting-group"><h3>Automatic allocations</h3>${Object.entries(allocations).map(([name, value]) => `<div class="setting-row"><label>${escape(name)}</label><input class="allocation-input" data-name="${escape(name)}" type="number" min="0" max="100" value="${value}"><span>%</span></div>`).join('')}</section><section class="card setting-group"><h3>Data</h3><div class="setting-row"><label>Stored only on this device</label><button class="link-btn" id="exportData">Export backup</button></div><div class="setting-row"><label>Delete every app record</label><button class="link-btn danger-link" id="resetData">Delete all data</button></div></section></div>`;
+}
+
+function transactions() {
+  const purchases = activity().filter(item => item.type === 'spend');
+  const subscriptionItems = data.subscriptions.map(sub => ({ ...sub, due: subscriptionDate(sub), status: subscriptionStatus(sub) })).sort((a, b) => a.due - b.due);
+  $('#transactions').innerHTML = `<div class="section-title"><h2>My subscriptions</h2></div><section class="card activity"><div class="row"><div><strong>Reserved before payday</strong><p>This only includes unpaid subscriptions due before payday.</p></div><strong class="amount-out">${money(subscriptionsReserved())}</strong></div>${subscriptionItems.map(sub => `<div class="activity-item"><div class="activity-icon">$</div><div class="activity-main"><strong>${escape(sub.name)}</strong><p>Next charge ${sub.due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${money(sub.amount)} monthly${sub.status.label ? ` · <span style="color:${sub.status.color};font-weight:800">● ${sub.status.label}</span>` : ''}</p></div><div class="subscription-actions">${sub.status.label === 'Paid' ? '' : `<button class="link-btn" data-mark-subscription-paid="${sub.id}">Mark paid</button>`}<button class="link-btn danger-link" data-delete-subscription="${sub.id}">Cancel subscription</button></div></div>`).join('') || '<div class="empty">No subscriptions yet.<br>Add the subscriptions you pay each month.</div>'}<button class="primary" id="addSubscription">Add subscription</button></section><div class="section-title"><h2>Every purchase</h2><button class="link-btn" id="addTransaction">+ Add</button></div><div class="card activity">${purchases.map(item => `<div class="activity-item"><div class="activity-icon">-</div><div class="activity-main"><strong>${escape(item.name)}</strong><p>${escape(item.category)} · ${item.date}${item.notes ? ` · ${escape(item.notes)}` : ''}</p><div class="transaction-actions"><button class="link-btn" data-edit-transaction="${item.id}">Edit</button><button class="link-btn danger-link" data-delete-transaction="${item.id}">Delete</button></div></div><strong class="amount-out">-${money(item.amount)}</strong></div>`).join('') || '<div class="empty">No transactions yet.<br>Tap + to log your first purchase.</div>'}</div><button class="fab" id="addTransactionFab">+ Add transaction</button>`;
+}
+
+let active = 'dashboard';
+let editingTransactionId = null;
+function render() {
+  const screens = ['dashboard', 'transactions', 'payday', 'goals', 'settings'];
+  screens.forEach(id => { document.getElementById(id).classList.toggle('active', id === active); if (id === active) ({ dashboard, transactions, payday, goals, settings })[id](); });
+  $('.topbar h1').textContent = active[0].toUpperCase() + active.slice(1);
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.screen === active));
+}
+
+function openTransaction(id) {
+  const existing = id ? data.transactions.find(item => item.id === id) : null;
+  editingTransactionId = existing?.id || null;
+  $('#formTitle').textContent = existing ? 'Edit transaction' : 'Add transaction';
+  $('#category').innerHTML = data.settings.categories.map(category => `<option>${escape(category)}</option>`).join('');
+  $('#entryForm').reset();
+  $('#amount').value = existing?.amount || '';
+  $('#name').value = existing?.name || '';
+  $('#category').value = existing?.category || data.settings.categories[0];
+  $('#entryDate').value = existing?.date || today();
+  $('#notes').value = existing?.notes || '';
+  $('#entryDialog').showModal();
+}
+
+function preview() {
+  const amount = Number($('#paycheckAmount').value) || 0;
+  const used = Object.values(data.settings.allocations).reduce((sum, value) => sum + Number(value || 0), 0);
+  $('#allocationPreview').innerHTML = Object.entries(data.settings.allocations).map(([name, percentage]) => `<div><span>${escape(name)} (${percentage}%)</span><b>${money(amount * percentage / 100)}</b></div>`).join('') + `<div><span>Available to spend</span><b>${money(amount * (100 - used) / 100)}</b></div>`;
+}
+
+const SUBSCRIPTION_PRESETS = [{ name: 'ChatGPT Plus', amount: 20 }, { name: 'Xbox Game Pass Ultimate', amount: 22.99 }, { name: 'Spotify Premium Individual', amount: 12.99 }, { name: 'iCloud+ (50 GB)', amount: 0.99 }, { name: 'Uber One', amount: 9.99 }];
+const refreshSubscriptionSuggestions = () => { $('#subscriptionPresetList').innerHTML = SUBSCRIPTION_PRESETS.map(sub => `<option value="${escape(sub.name)}">${money(sub.amount)}/month</option>`).join(''); };
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('button'); if (!button) return;
+  if (button.dataset.closeDialog) { document.getElementById(button.dataset.closeDialog)?.close(); editingTransactionId = null; return; }
+  if (button.dataset.screen) { active = button.dataset.screen; render(); return; }
+  if (button.dataset.go) { active = button.dataset.go; render(); return; }
+  if (button.id === 'addTransaction' || button.id === 'addTransactionFab') openTransaction();
+  if (button.id === 'openPayday') { $('#paycheckAmount').value = ''; preview(); $('#paydayDialog').showModal(); }
+  if (button.id === 'addGoal') $('#goalDialog').showModal();
+  if (button.id === 'addSubscription') { $('#subscriptionForm').reset(); refreshSubscriptionSuggestions(); $('#subscriptionDialog').showModal(); }
+  if (button.id === 'resetRecentPaycheck') {
+    if (!paycheckResetIsOpen()) return alert('That 30-minute reset window has closed.');
+    if (confirm('Reset only this paycheck? Your transactions, goals, subscriptions, and settings will stay.')) {
+      data.paychecks.pop(); const date = new Date(data.settings.nextPayday + 'T00:00'); date.setDate(date.getDate() - payInterval()); data.settings.nextPayday = date.toISOString().slice(0, 10); save(); render();
+    }
+  }
+  if (button.dataset.deposit !== undefined) { const amount = Number(prompt('How much do you want to move into this goal?')); if (amount > 0 && amount <= available()) { data.goals[Number(button.dataset.deposit)].saved += amount; save(); render(); } else if (amount > available()) alert('That is more than your available-to-spend balance.'); }
+  if (button.dataset.editTransaction !== undefined) openTransaction(button.dataset.editTransaction);
+  if (button.dataset.deleteTransaction !== undefined && confirm('Delete this transaction?')) { data.transactions = data.transactions.filter(item => item.id !== button.dataset.deleteTransaction); save(); render(); }
+  if (button.dataset.markSubscriptionPaid !== undefined) { const sub = data.subscriptions.find(item => item.id === button.dataset.markSubscriptionPaid); if (sub) { sub.paidFor = subscriptionPeriod(); save(); render(); } }
+  if (button.dataset.deleteSubscription !== undefined) { const sub = data.subscriptions.find(item => item.id === button.dataset.deleteSubscription); if (sub && confirm(`Cancel ${sub.name}?`)) { data.subscriptions = data.subscriptions.filter(item => item.id !== sub.id); save(); render(); } }
+  if (button.id === 'saveSubscription') { const name = $('#subscriptionName').value.trim(), amount = Number($('#subscriptionAmount').value), dueDay = Number($('#subscriptionDay').value); if (!name || !amount || dueDay < 1 || dueDay > 31) return alert('Enter a subscription name, monthly cost, and charge day.'); data.subscriptions.push({ id: crypto.randomUUID(), name, amount, dueDay }); save(); $('#subscriptionDialog').close(); render(); }
+  if (button.id === 'resetData' && confirm('Delete every Money Moves record from this device?')) { data = JSON.parse(JSON.stringify(defaultData)); save(); render(); }
+  if (button.id === 'exportData') { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })); link.download = 'money-moves-backup.json'; link.click(); URL.revokeObjectURL(link.href); }
+});
+
+$('#entryForm').addEventListener('submit', event => {
+  if (event.submitter?.value === 'cancel') return;
+  event.preventDefault(); const amount = Number($('#amount').value); if (!amount) return;
+  const entry = { name: $('#name').value.trim(), amount, category: $('#category').value, date: $('#entryDate').value, notes: $('#notes').value.trim() };
+  if (editingTransactionId) data.transactions = data.transactions.map(item => item.id === editingTransactionId ? { ...item, ...entry } : item);
+  else data.transactions.push({ id: crypto.randomUUID(), ...entry });
+  editingTransactionId = null; save(); $('#entryDialog').close(); render();
+});
+$('#paycheckAmount').addEventListener('input', preview);
+$('#paydayForm').addEventListener('submit', event => {
+  if (event.submitter?.value === 'cancel') return;
+  event.preventDefault(); const amount = Number($('#paycheckAmount').value); if (!amount) return;
+  const allocations = Object.fromEntries(Object.entries(data.settings.allocations).map(([name, percentage]) => [name, Math.round(amount * percentage) / 100]));
+  data.paychecks.push({ id: crypto.randomUUID(), amount, allocations, date: today(), loggedAt: Date.now() });
+  const date = new Date(data.settings.nextPayday + 'T00:00'); date.setDate(date.getDate() + payInterval()); data.settings.nextPayday = date.toISOString().slice(0, 10);
+  save(); $('#paydayDialog').close(); active = 'payday'; render();
+});
+$('#goalForm').addEventListener('submit', event => { if (event.submitter?.value === 'cancel') return; event.preventDefault(); data.goals.push({ id: crypto.randomUUID(), name: $('#goalName').value.trim(), target: Number($('#goalTarget').value), saved: 0, date: $('#goalDate').value }); save(); $('#goalDialog').close(); render(); });
+$('#subscriptionName').addEventListener('input', event => { const preset = SUBSCRIPTION_PRESETS.find(item => item.name.toLowerCase() === event.target.value.trim().toLowerCase()); if (preset) $('#subscriptionAmount').value = Number(preset.amount).toFixed(2); });
+document.addEventListener('change', event => { if (event.target.id === 'nextPayday') data.settings.nextPayday = event.target.value; if (event.target.id === 'frequency') data.settings.frequency = event.target.value; if (event.target.classList.contains('allocation-input')) data.settings.allocations[event.target.dataset.name] = Number(event.target.value) || 0; save(); render(); });
+document.querySelectorAll('[data-close-dialog]').forEach(button => { button.type = 'button'; });
+document.querySelectorAll('dialog').forEach(dialog => { dialog.addEventListener('click', event => { const box = dialog.getBoundingClientRect(); if (event.target === dialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) dialog.close(); }); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
+render();
