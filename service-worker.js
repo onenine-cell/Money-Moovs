@@ -1,4 +1,4 @@
-const CACHE = 'money-moves-v23';
+const CACHE = 'money-moves-v24';
 const OFFLINE_ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './icons/icon.svg'];
 
 // Keep an offline copy, but always use the newest published app when online.
