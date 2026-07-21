@@ -34,7 +34,7 @@
 
     <dialog id="entryDialog">
       <form method="dialog" id="entryForm">
-<div class="modal-head"><h2 id="formTitle">Add transaction</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="entryDialog" aria-label="Close">×</button></div>
+<div class="modal-head"><h2 id="formTitle">Add transaction</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="entryDialog" aria-label="Close">Ã—</button></div>
         <input type="hidden" id="entryType" value="transaction" />
         <label>Amount<input id="amount" inputmode="decimal" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
         <label id="nameLabel">Merchant<input id="name" maxlength="50" required placeholder="Example: Chevron" /></label>
@@ -47,7 +47,7 @@
 
     <dialog id="paydayDialog">
       <form method="dialog" id="paydayForm">
-        <div class="modal-head"><h2>Log paycheck</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="paydayDialog" aria-label="Close">×</button></div>
+        <div class="modal-head"><h2>Log paycheck</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="paydayDialog" aria-label="Close">Ã—</button></div>
         <p class="muted">Review the split before saving. You can change these percentages in Settings.</p>
         <label>Paycheck amount<input id="paycheckAmount" inputmode="decimal" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
         <div id="allocationPreview" class="allocation-preview"></div>
@@ -57,7 +57,7 @@
 
     <dialog id="goalDialog">
       <form method="dialog" id="goalForm">
-        <div class="modal-head"><h2>New goal</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="goalDialog" aria-label="Close">×</button></div>
+        <div class="modal-head"><h2>New goal</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="goalDialog" aria-label="Close">Ã—</button></div>
         <label>Goal name<input id="goalName" maxlength="50" required placeholder="Example: Car fund" /></label>
         <label>Target amount<input id="goalTarget" inputmode="decimal" type="number" min="1" step="0.01" required placeholder="5000" /></label>
         <label>Target date <span class="muted">(optional)</span><input id="goalDate" type="date" /></label>
@@ -66,7 +66,7 @@
     </dialog>
     <dialog id="subscriptionDialog">
       <form method="dialog" id="subscriptionForm">
-        <div class="modal-head"><h2>Add subscription</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="subscriptionDialog" aria-label="Close">×</button></div>
+        <div class="modal-head"><h2>Add subscription</h2><button class="plain" value="cancel" formnovalidate data-close-dialog="subscriptionDialog" aria-label="Close">Ã—</button></div>
         <p class="muted">Money for subscriptions due before your next paycheck is reserved automatically.</p>
         <label>Subscription name<input id="subscriptionName" list="subscriptionPresetList" maxlength="50" required placeholder="Start typing: ChatGPT, Spotify, Uber..." /></label>
         <datalist id="subscriptionPresetList"></datalist>
@@ -75,7 +75,7 @@
         <div class="modal-actions"><button class="secondary" value="cancel" formnovalidate data-close-dialog="subscriptionDialog">Cancel</button><button class="primary" type="button" id="saveSubscription">Add subscription</button></div>
       </form>
     </dialog>
-    <style>:root{--bg:#060817;--panel:#0f1630;--panel2:#172143;--line:#2a3a67;--text:#f4f7ff;--muted:#9aa9cc;--green:#72a5ff;--gold:#f0c36b;--red:#ff7d91}html{height:100%;overscroll-behavior:none}body{min-height:100dvh;overscroll-behavior-y:none;touch-action:pan-y;background:radial-gradient(circle at 50% -20%,#253b87 0,var(--bg) 44%)}.activity-icon{background:#1c2f68;color:#8ab5ff}.payday-tab.active .tab-icon{color:#8ab5ff}#transactions.active{max-height:calc(100dvh - 150px);overflow-y:auto;padding:0 2px 170px;-webkit-overflow-scrolling:touch}.activity-main{min-width:0}.transaction-actions{display:flex;gap:12px;margin-top:8px}.subscription-actions{display:grid;justify-items:end;gap:6px}</style>
-<script src="app.js?v=21"></script>
+    <style>:root{--bg:#060817;--panel:#0f1630;--panel2:#172143;--line:#2a3a67;--text:#f4f7ff;--muted:#9aa9cc;--green:#72a5ff;--gold:#f0c36b;--red:#ff7d91}html{height:100%;overscroll-behavior:none}body{min-height:100dvh;overscroll-behavior-y:none;touch-action:pan-y;background:radial-gradient(circle at 50% -20%,#253b87 0,var(--bg) 44%)}.activity-icon{background:#1c2f68;color:#8ab5ff}.payday-tab.active .tab-icon{color:#8ab5ff}#transactions.active{max-height:calc(100dvh - 150px);overflow-y:auto;padding:0 2px 170px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}#transactions.active::-webkit-scrollbar{display:none}.activity-main{min-width:0}.transaction-actions{display:flex;gap:12px;margin-top:8px}.subscription-actions{display:grid;justify-items:end;gap:6px}</style>
+<script src="app.js?v=22"></script>
   </body>
 </html>
